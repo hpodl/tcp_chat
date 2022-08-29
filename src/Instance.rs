@@ -5,13 +5,13 @@ use std::{
 
 use super::ThreadPool::*;
 
-struct Instance {
+pub struct Instance {
     listener: TcpListener,
     thread_pool: ThreadPool,
 }
 
 impl Instance {
-    fn new<A>(address: A, thread_count: usize) -> io::Result<Self>
+    pub fn new<A>(address: A, thread_count: usize) -> io::Result<Self>
     where
         A: ToSocketAddrs,
     {
@@ -21,24 +21,27 @@ impl Instance {
         })
     }
 
-    fn run() {}
+    pub fn run(&self) {
+        for stream in self.listener.incoming() {
+            if let Ok(connection) = stream {
+                self.thread_pool.execute(|| handle_connection(connection))
+            }
+        }
+    }
 }
 
-pub fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
+fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
-    stream.read(&mut buffer).unwrap();
-
-    // let request_line = buffer.lines().next().unwrap().unwrap();
-    while let Some(message) = buffer.lines().next() {
-        println!("{:?}", message);
+    match stream.read(&mut buffer) {
+        Ok(_) => {
+            println!("{}", String::from_utf8_lossy(&buffer));
+        }
+        Err(e) => eprintln!("{}", e),
     }
-    Ok(())
 }
 
 #[cfg(test)]
 mod test {
-    use std::{io::Write, net::TcpStream};
-
     use super::*;
 
     // Helper function
