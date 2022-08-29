@@ -1,7 +1,9 @@
 use std::{
-    io,
+    io::{self, prelude::*},
     net::{TcpListener, ToSocketAddrs},
 };
+
+mod ThreadPool;
 
 struct Instance {
     listener: TcpListener,
@@ -16,19 +18,24 @@ impl Instance {
             listener: TcpListener::bind(address)?,
         })
     }
+
+    fn run() {
+        unimplemented!()
+    }
 }
 
 fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use std::{net::TcpStream, io::Write};
+    use std::{io::Write, net::TcpStream};
 
     use super::*;
 
     // Helper function
-    fn connect_and_send<A>(address: A, message: &str)  -> io::Result<usize>
-    where A: ToSocketAddrs
+    fn connect_and_send<A>(address: A, message: &str) -> io::Result<usize>
+    where
+        A: ToSocketAddrs,
     {
         let mut connection = TcpStream::connect(address).unwrap();
         let buf = b"Messsage";
