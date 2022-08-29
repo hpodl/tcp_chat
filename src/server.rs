@@ -3,7 +3,7 @@ use std::{
     net::{TcpListener, TcpStream, ToSocketAddrs},
 };
 
-use super::ThreadPool::*;
+use super::thread_pool::*;
 
 pub struct Instance {
     listener: TcpListener,
@@ -11,6 +11,11 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// Create a server instance on `address` socket
+    /// and assign it `thread_count` threads (`Worker`s)
+    ///
+    /// # Errors
+    /// Returns an error if binding a `TcpListener` to the given socket fails
     pub fn new<A>(address: A, thread_count: usize) -> io::Result<Self>
     where
         A: ToSocketAddrs,
