@@ -26,6 +26,10 @@ impl Instance {
         })
     }
 
+    /// Loops over incoming connections and dispatches tasks of handling them
+    ///
+    /// # Panics and Errors
+    /// All error handling is delegated to
     pub fn run(&self) {
         for stream in self.listener.incoming().flatten() {
             self.thread_pool.execute(|| handle_connection(stream))

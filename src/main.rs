@@ -1,3 +1,4 @@
+mod chat;
 mod server;
 mod thread_pool;
 
