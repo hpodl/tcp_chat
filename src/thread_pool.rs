@@ -52,7 +52,7 @@ impl Drop for ThreadPool {
     /// Drop ThreadPool.
     ///
     /// Drops `sender` which causes threads to break out of their loops;
-    /// waits for them afterwards
+    /// stops when all threads have been `join`ed
     ///
     /// # Panics
     ///
@@ -121,7 +121,7 @@ mod test {
     fn thread_pool_executes_closure() {
         ThreadPool::new(4).execute(|| {
             let a = 3;
-            a + 4;
+            let _b = a + 4;
         });
     }
 
@@ -129,8 +129,39 @@ mod test {
     fn thread_pool_executes_function() {
         fn example_fun() {
             let a = 4;
-            a - 1;
+            let _b = a - 1;
         }
         ThreadPool::new(4).execute(&example_fun);
+    }
+
+    #[test]
+    fn worker_constructs() {
+        let (_, receiver) = mpsc::channel::<Job>();
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        let _worker = Worker::new(0, Arc::clone(&receiver));
+    }
+
+    use std::sync::atomic::{AtomicI8, Ordering};
+    #[test]
+    fn worker_executes_jobs() {
+        let (sender, receiver) = mpsc::channel::<Job>();
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        let visiting_var = Arc::new(AtomicI8::new(0));
+        let cloned_visiting = Arc::clone(&visiting_var);
+
+        const TO_ADD: i8 = 100;
+        let job = Box::new(move || {
+            cloned_visiting.fetch_add(TO_ADD, Ordering::SeqCst);
+        });
+
+        let worker = Worker::new(0, Arc::clone(&receiver));
+        sender.send(job).unwrap();
+
+        drop(sender);
+        worker.thread.unwrap().join().unwrap();
+
+        assert_eq!(visiting_var.load(Ordering::SeqCst), TO_ADD);
     }
 }

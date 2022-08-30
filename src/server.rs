@@ -27,10 +27,8 @@ impl Instance {
     }
 
     pub fn run(&self) {
-        for stream in self.listener.incoming() {
-            if let Ok(connection) = stream {
-                self.thread_pool.execute(|| handle_connection(connection))
-            }
+        for stream in self.listener.incoming().flatten() {
+            self.thread_pool.execute(|| handle_connection(stream))
         }
     }
 }
@@ -49,17 +47,18 @@ fn handle_connection(mut stream: TcpStream) {
 mod test {
     use super::*;
 
-    // Helper function
+    ///# Test helper function
     fn connect_and_send<A>(address: A, message: &str) -> io::Result<usize>
     where
         A: ToSocketAddrs,
     {
         let mut connection = TcpStream::connect(address).unwrap();
-        let buf = b"Messsage";
-
-        connection.write(buf)
+        connection.write(message.as_bytes())
     }
 
+    /////////
+    //TESTS//
+    /////////
     #[test]
     fn instance_constructs_on_valid_address() {
         assert!(Instance::new("127.0.0.1:25001", 4).is_ok())
@@ -68,5 +67,13 @@ mod test {
     #[test]
     fn instance_errors_on_invalid_address() {
         assert!(Instance::new("266.788.123.1:7878", 5).is_err())
+    }
+
+    #[test]
+    fn instance_accepts_connections() {
+        const ADDRESS: &str = "127.0.0.1:1234";
+        let _server = Instance::new(ADDRESS, 4);
+
+        connect_and_send(ADDRESS, "Don't panic").unwrap();
     }
 }
