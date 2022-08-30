@@ -3,14 +3,16 @@ use std::{
     net::{TcpListener, TcpStream, ToSocketAddrs},
 };
 
-use super::thread_pool::*;
+use super::thread_pool::ThreadPool;
+use super::chat::Chat;
 
-pub struct Instance {
+pub struct Instance<'a> {
     listener: TcpListener,
     thread_pool: ThreadPool,
+    chat: Chat<'a>,
 }
 
-impl Instance {
+impl<'a> Instance<'a> {
     /// Create a server instance on `address` socket
     /// and assign it `thread_count` threads (`Worker`s)
     ///
@@ -23,6 +25,7 @@ impl Instance {
         Ok(Self {
             listener: TcpListener::bind(address)?,
             thread_pool: ThreadPool::new(thread_count),
+            chat: Chat::new(),
         })
     }
 

@@ -1,19 +1,19 @@
 use std::vec;
 
-struct Chat<'a> {
+pub struct Chat<'a> {
     messages: Vec<Message<'a>>,
 }
 
 impl<'a> Chat<'a> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { messages: vec![] }
     }
 
-    fn add(&mut self, message: Message<'a>) {
+    pub fn add(&mut self, message: Message<'a>) {
         self.messages.push(message);
     }
 
-    fn get_messages(&'a self) -> &'a Vec<Message<'a>> {
+    pub fn get_messages(&'a self) -> &'a Vec<Message<'a>> {
         &&self.messages
     }
 }
