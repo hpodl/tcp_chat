@@ -1,9 +1,10 @@
+use core::slice::SlicePattern;
 use std::{
     io::{self, prelude::*},
-    net::{TcpListener, TcpStream, ToSocketAddrs},
+    net::{TcpListener, TcpStream, ToSocketAddrs}, slice,
 };
 
-use super::chat::Chat;
+use super::chat::{Chat, Message};
 
 pub struct Instance<'a> {
     listener: TcpListener,
@@ -29,20 +30,18 @@ impl<'a> Instance<'a> {
     ///
     /// # Panics and Errors
     /// All error handling is delegated to
-    pub fn run(&self) {
-        for stream in self.listener.incoming().flatten() {
-            handle_connection(stream);
+    pub fn run(&mut self) {
+        for mut stream in self.listener.incoming().flatten() {
+            let mut buffer = [0; 1024];
+         
+            match stream.read(&mut buffer) {
+                Ok(_) => {
+                    let msg: &[u8] = buffer.iter().take_while(|&&byte| byte != 0).collect();
+                    self.chat.add(Message::new(, "John"));
+                }
+                Err(e) => eprintln!("{}", e),
+            }
         }
-    }
-}
-
-fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024];
-    match stream.read(&mut buffer) {
-        Ok(_) => {
-            println!("{}", String::from_utf8_lossy(&buffer));
-        }
-        Err(e) => eprintln!("{}", e),
     }
 }
 

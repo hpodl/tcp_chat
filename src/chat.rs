@@ -18,14 +18,16 @@ impl<'a> Chat<'a> {
     }
 }
 
-struct Message<'a> {
+#[derive(Debug)]
+pub struct Message<'a> {
     content: &'a [u8],
     author: &'a str,
 }
 
 impl<'a> Message<'a> {
-    fn new(content: &'a [u8], author: &'a str) -> Message<'a> {
-        Message { content, author }
+    pub fn new(content: &'a [u8], author: &'a str) -> Message<'a> {
+        
+        Message { content: content.into() , author }
     }
 }
 
