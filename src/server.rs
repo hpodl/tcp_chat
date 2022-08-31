@@ -3,28 +3,24 @@ use std::{
     net::{TcpListener, TcpStream, ToSocketAddrs},
 };
 
-use super::thread_pool::ThreadPool;
 use super::chat::Chat;
 
 pub struct Instance<'a> {
     listener: TcpListener,
-    thread_pool: ThreadPool,
     chat: Chat<'a>,
 }
 
 impl<'a> Instance<'a> {
     /// Create a server instance on `address` socket
-    /// and assign it `thread_count` threads (`Worker`s)
     ///
     /// # Errors
     /// Returns an error if binding a `TcpListener` to the given socket fails
-    pub fn new<A>(address: A, thread_count: usize) -> io::Result<Self>
+    pub fn new<A>(address: A) -> io::Result<Self>
     where
         A: ToSocketAddrs,
     {
         Ok(Self {
             listener: TcpListener::bind(address)?,
-            thread_pool: ThreadPool::new(thread_count),
             chat: Chat::new(),
         })
     }
@@ -35,7 +31,7 @@ impl<'a> Instance<'a> {
     /// All error handling is delegated to
     pub fn run(&self) {
         for stream in self.listener.incoming().flatten() {
-            self.thread_pool.execute(|| handle_connection(stream))
+            handle_connection(stream);
         }
     }
 }
@@ -68,18 +64,18 @@ mod test {
     /////////
     #[test]
     fn instance_constructs_on_valid_address() {
-        assert!(Instance::new("127.0.0.1:25001", 4).is_ok())
+        assert!(Instance::new("127.0.0.1:25001").is_ok())
     }
 
     #[test]
     fn instance_errors_on_invalid_address() {
-        assert!(Instance::new("266.788.123.1:7878", 5).is_err())
+        assert!(Instance::new("266.788.123.1:7878").is_err())
     }
 
     #[test]
     fn instance_accepts_connections() {
         const ADDRESS: &str = "127.0.0.1:1234";
-        let _server = Instance::new(ADDRESS, 4);
+        let _server = Instance::new(ADDRESS);
 
         connect_and_send(ADDRESS, "Don't panic").unwrap();
     }
