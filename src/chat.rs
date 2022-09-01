@@ -1,3 +1,4 @@
+use std::slice;
 use std::vec;
 
 pub struct Chat<'a> {
@@ -10,6 +11,7 @@ impl<'a> Chat<'a> {
     }
 
     pub fn add(&mut self, message: Message<'a>) {
+        println!("Adding message: {:?}", message);
         self.messages.push(message);
     }
 
@@ -20,14 +22,16 @@ impl<'a> Chat<'a> {
 
 #[derive(Debug)]
 pub struct Message<'a> {
-    content: &'a [u8],
+    content: Vec<u8>,
     author: &'a str,
 }
 
-impl<'a> Message<'a> {
-    pub fn new(content: &'a [u8], author: &'a str) -> Message<'a> {
-        
-        Message { content: content.into() , author }
+impl<'a, 'b> Message<'a> {
+    pub fn new(content: &'b [u8], author: &'a str) -> Message<'a> {
+        Message::<'a> {
+            content: content.into(),
+            author,
+        }
     }
 }
 

@@ -1,7 +1,6 @@
-use core::slice::SlicePattern;
 use std::{
     io::{self, prelude::*},
-    net::{TcpListener, TcpStream, ToSocketAddrs}, slice,
+    net::{TcpListener, ToSocketAddrs},
 };
 
 use super::chat::{Chat, Message};
@@ -32,13 +31,14 @@ impl<'a> Instance<'a> {
     /// All error handling is delegated to
     pub fn run(&mut self) {
         for mut stream in self.listener.incoming().flatten() {
-            let mut buffer = [0; 1024];
-         
+            let mut buffer = [0u8; 1024];
+
             match stream.read(&mut buffer) {
-                Ok(_) => {
-                    let msg: &[u8] = buffer.iter().take_while(|&&byte| byte != 0).collect();
-                    self.chat.add(Message::new(, "John"));
-                }
+                Ok(size) => match &buffer[..4] {
+                    b"SEND" => self.chat.add(Message::new(&buffer[..size], "Ferris")),
+                    b"TAKE" => unimplemented!(),
+                    _ => eprintln!("got an invalid request"),
+                },
                 Err(e) => eprintln!("{}", e),
             }
         }
@@ -48,6 +48,7 @@ impl<'a> Instance<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::net::TcpStream;
 
     ///# Test helper function
     fn connect_and_send<A>(address: A, message: &str) -> io::Result<usize>
