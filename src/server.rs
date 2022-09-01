@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::chat::{Chat, Message};
-
+use super::request_type::ReqType;
 pub struct Instance<'a> {
     listener: TcpListener,
     chat: Chat<'a>,
@@ -34,10 +34,10 @@ impl<'a> Instance<'a> {
             let mut buffer = [0u8; 1024];
 
             match stream.read(&mut buffer) {
-                Ok(size) => match &buffer[..4] {
-                    b"SEND" => self.chat.add(Message::new(&buffer[..size], "Ferris")),
-                    b"TAKE" => unimplemented!(),
-                    _ => eprintln!("got an invalid request"),
+                Ok(size) => match ReqType::parse(&buffer[..size]) {
+                    ReqType::SendRequest(msg) => {self.chat.add(Message::new(msg, "Ferris"));},
+                    ReqType::FetchSince(_since) =>{ stream.write(self.chat.get_messages()[0].0); },
+                    ReqType::Invalid =>  { stream.write(b"Invalid request"); }
                 },
                 Err(e) => eprintln!("{}", e),
             }

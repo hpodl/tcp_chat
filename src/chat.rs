@@ -12,8 +12,8 @@ impl<'a> Chat<'a> {
         self.messages.push(message);
     }
 
-    pub fn get_messages(&'a self) -> &'a Vec<Message<'a>> {
-        &&self.messages
+    pub fn get_messages(&'a self) -> Vec<(&'a Vec<u8>, &'a str)> {
+       self.messages.iter().map(|msg| (&msg.content, msg.author)).collect()
     }
 }
 
@@ -53,7 +53,7 @@ mod test {
         chat.add(Message::new(b"ABC", "author"));
 
         match chat.get_messages().get(0) {
-            Some(Message { .. }) => {}
+            Some(..) => {}
             _ => panic!(),
         }
     }
