@@ -5,12 +5,12 @@ use std::{
 
 use super::chat::{Chat, Message};
 use super::request_type::ReqType;
-pub struct Instance<'a> {
+pub struct Instance {
     listener: TcpListener,
-    chat: Chat<'a>,
+    chat: Chat,
 }
 
-impl<'a> Instance<'a> {
+impl Instance {
     /// Create a server instance on `address` socket
     ///
     /// # Errors
@@ -35,9 +35,20 @@ impl<'a> Instance<'a> {
 
             match stream.read(&mut buffer) {
                 Ok(size) => match ReqType::parse(&buffer[..size]) {
-                    ReqType::SendRequest(msg) => {self.chat.add(Message::new(msg, "Ferris"));},
-                    ReqType::FetchSince(_since) =>{ stream.write(self.chat.get_messages()[0].0); },
-                    ReqType::Invalid =>  { stream.write(b"Invalid request"); }
+                    ReqType::SendRequest(msg) => {
+                        self.chat.add(Message::new(msg, b"Ferris"));
+                    }
+                    ReqType::FetchSince(_since) => {
+                        for msg in self.chat.get_messages() {
+                            match stream.write(msg.0.as_bytes()) {
+                                Ok(_) => {}
+                                Err(e) => eprintln!("Error writing into stream: {}", e),
+                            }
+                        }
+                    }
+                    ReqType::Invalid => {
+                        stream.write(b"Invalid request");
+                    }
                 },
                 Err(e) => eprintln!("{}", e),
             }

@@ -1,3 +1,5 @@
+use std::str::from_utf8;
+
 #[derive(Debug, PartialEq)]
 pub enum ReqType<'a> {
     SendRequest(&'a [u8]),
