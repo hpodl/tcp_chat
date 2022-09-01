@@ -1,6 +1,3 @@
-use std::slice;
-use std::vec;
-
 pub struct Chat<'a> {
     messages: Vec<Message<'a>>,
 }
@@ -26,8 +23,8 @@ pub struct Message<'a> {
     author: &'a str,
 }
 
-impl<'a, 'b> Message<'a> {
-    pub fn new(content: &'b [u8], author: &'a str) -> Message<'a> {
+impl<'a> Message<'a> {
+    pub fn new<'b>(content: &'b [u8], author: &'a str) -> Message<'a> {
         Message::<'a> {
             content: content.into(),
             author,
