@@ -1,6 +1,6 @@
 use std::{
     io::{self, prelude::*},
-    net::{TcpListener, ToSocketAddrs},
+    net::{TcpListener, ToSocketAddrs, Shutdown},
 };
 
 use super::chat::{Chat, Message};
@@ -31,29 +31,51 @@ impl Instance {
     /// All error handling is delegated to
     pub fn run(&mut self) {
         for mut stream in self.listener.incoming().flatten() {
-            let mut buffer = [0u8; 1024];
+            let mut buffer = String::new();
+            buffer.reserve(1024);
 
-            match stream.read(&mut buffer) {
-                Ok(size) => match ReqType::parse(&buffer[..size]) {
-                    ReqType::SendRequest(msg) => {
-                        self.chat.add(Message::new(msg, b"Ferris"));
-                    }
-                    ReqType::FetchSince(_since) => {
-                        for msg in self.chat.get_messages() {
-                            match stream.write(msg.0.as_bytes()) {
-                                Ok(_) => {}
-                                Err(e) => eprintln!("Error writing into stream: {}", e),
+            match stream.read_to_string(&mut buffer) {
+                Ok(_) => {
+                    for request in buffer.split_terminator('\n') {
+                        match ReqType::parse(request.as_bytes()) {
+                            ReqType::SendRequest((msg, author)) => {
+                                println!("Send");
+                                self.chat.add(Message::new(msg, author));
+                            }
+                            ReqType::FetchSince(_) => {
+                                println!("Fetch");
+                                let to_send = format_messages(self.chat.get_messages());
+                                println!("{}", to_send);
+                                match stream.write_all(to_send.as_bytes()) {
+                                    Ok(_) => {}
+                                    Err(e) => eprintln!("Error writing into stream: {}", e),
+                                }
+                            }
+                            ReqType::Invalid(e) => {
+                                println!("Invalid: {}", e);
+                                if stream.write(b"Invalid request").is_err() {
+                                    eprintln!("Error writing into stream: {}", e);
+                                };
                             }
                         }
                     }
-                    ReqType::Invalid => {
-                        stream.write(b"Invalid request");
-                    }
-                },
+                    if stream.shutdown(Shutdown::Write).is_err() {
+                        eprintln!("Failed to shut down the write side of connection.");
+                    };
+                }
                 Err(e) => eprintln!("{}", e),
             }
         }
     }
+}
+
+fn format_messages<'a>(messages: Vec<(&'a str, &'a str)>) -> String {
+    let format_message = |(content, author): (&str, &str)| format!("{}: {}\n", author, content);
+
+    messages
+        .iter()
+        .map(|&message| format_message(message))
+        .collect::<String>()
 }
 
 #[cfg(test)]

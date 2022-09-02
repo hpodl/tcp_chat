@@ -26,7 +26,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new<'b>(content: &[u8], author: &[u8]) -> Message {
+    pub fn new(content: &[u8], author: &[u8]) -> Message {
         Message {
             content: content.escape_ascii().to_string(),
             author: author.escape_ascii().to_string(),
