@@ -14,7 +14,6 @@ impl<'a> ReqType<'a> {
             return Self::Invalid("Request too short.");
         }
 
-        println!("{:?}", &request[..Self::REQUEST_TYPE_BYTES]);
         match &request[..Self::REQUEST_TYPE_BYTES] {
             b"SEND" => Self::SendRequest((
                 &request[Self::HEADER_BYTES..],
@@ -26,10 +25,7 @@ impl<'a> ReqType<'a> {
                     .to_string(),
             ) {
                 Ok(val) => Self::FetchSince(val),
-                Err(e) => {
-                    println!("{}", e);
-                    Self::Invalid("Couldn't parse the request.")
-                }
+                Err(_) => Self::Invalid("Couldn't parse the integer."),
             },
             _ => Self::Invalid("Not a valid request type."),
         }

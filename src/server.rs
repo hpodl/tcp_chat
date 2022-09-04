@@ -1,6 +1,6 @@
 use std::{
     io::{self, prelude::*},
-    net::{TcpListener, ToSocketAddrs, Shutdown},
+    net::{Shutdown, TcpListener, ToSocketAddrs},
 };
 
 use super::chat::{Chat, Message};
@@ -39,20 +39,19 @@ impl Instance {
                     for request in buffer.split_terminator('\n') {
                         match ReqType::parse(request.as_bytes()) {
                             ReqType::SendRequest((msg, author)) => {
-                                println!("Send");
+                                println!("Received a SEND request.");
                                 self.chat.add(Message::new(msg, author));
                             }
                             ReqType::FetchSince(_) => {
-                                println!("Fetch");
+                                println!("Received a TAKE request");
                                 let to_send = format_messages(self.chat.get_messages());
-                                println!("{}", to_send);
                                 match stream.write_all(to_send.as_bytes()) {
                                     Ok(_) => {}
                                     Err(e) => eprintln!("Error writing into stream: {}", e),
                                 }
                             }
                             ReqType::Invalid(e) => {
-                                println!("Invalid: {}", e);
+                                eprintln!("Invalid request: {}", e);
                                 if stream.write(b"Invalid request").is_err() {
                                     eprintln!("Error writing into stream: {}", e);
                                 };
@@ -63,7 +62,7 @@ impl Instance {
                         eprintln!("Failed to shut down the write side of connection.");
                     };
                 }
-                Err(e) => eprintln!("{}", e),
+                Err(e) => eprintln!("Error reading the stream: {}", e),
             }
         }
     }
