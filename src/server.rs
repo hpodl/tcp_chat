@@ -1,9 +1,9 @@
 use std::{
     io::{self, prelude::*},
-    net::{Shutdown, TcpListener, TcpStream, ToSocketAddrs},
+    net::{TcpListener, ToSocketAddrs},
 };
 
-use super::chat::{Chat, Message};
+use super::chat::Chat;
 use super::request::ReqType;
 
 pub struct Instance {
@@ -26,7 +26,9 @@ impl Instance {
         })
     }
 
-    /// Loops over incoming connections and dispatches tasks of handling them
+    /// Main server looop.
+    ///
+    /// Loops over incoming connections and handles them
     ///
     /// # Panics and Errors
     /// All error handling is delegated to
@@ -34,36 +36,22 @@ impl Instance {
         for mut stream in self.listener.incoming().flatten() {
             let mut buffer = [0; 1024];
 
-            if stream.read(&mut buffer).is_ok() {
-                match ReqType::parse(&buffer) {
+            if let Ok(bytes_read) = stream.read(&mut buffer) {
+                match ReqType::parse(&buffer[..bytes_read]) {
                     ReqType::Send(msg) => self.chat.add(msg),
                     ReqType::FetchSince(_TODO) => {
                         stream
-                            .write(&self.chat.get_messages().iter().fold(
-                                Vec::<u8>::new(),
-                                |mut all, current| {
-                                    all.append(&mut serde_json::to_vec(current).unwrap());
-                                    all
-                                },
-                            ))
+                            .write(&serde_json::to_vec(&self.chat.get_messages()[0]).unwrap())
                             .unwrap();
                     }
                     ReqType::Invalid(_) => {
-                        stream.write(b"TODO").unwrap();
+                        // TODO
+                        stream.write(b"Invalid request").unwrap();
                     }
                 };
             }
         }
     }
-}
-
-fn format_messages<'a>(messages: Vec<(&'a str, &'a str)>) -> String {
-    let format_message = |(content, author): (&str, &str)| format!("{}: {}\n", author, content);
-
-    messages
-        .iter()
-        .map(|&message| format_message(message))
-        .collect::<String>()
 }
 
 #[cfg(test)]

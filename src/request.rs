@@ -12,9 +12,6 @@ pub enum ReqType<'a> {
 }
 
 impl<'a> ReqType<'a> {
-    const HEADER_BYTES: usize = 20;
-    const REQUEST_TYPE_BYTES: usize = 4;
-
     pub fn parse(request: &'a [u8]) -> ReqType<'a> {
         from_slice::<ReqType<'a>>(request).unwrap_or(ReqType::Invalid("Invalid request."))
     }
