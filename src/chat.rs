@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub struct Chat {
     messages: Vec<Message>,
 }
@@ -11,25 +13,23 @@ impl Chat {
         self.messages.push(message);
     }
 
-    pub fn get_messages(&self) -> Vec<(&str, &str)> {
-        self.messages
-            .iter()
-            .map(|msg| (msg.content.as_str(), msg.author.as_str()))
-            .collect()
+    pub fn get_messages(&self) -> &Vec<Message> {
+        &self.messages
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Message {
     content: String,
     author: String,
 }
 
 impl Message {
-    pub fn new(content: &[u8], author: &[u8]) -> Message {
+    pub fn new(content: &str, author: &str) -> Message {
         Message {
-            content: content.escape_ascii().to_string(),
-            author: author.escape_ascii().to_string(),
+            content: content.to_string(),
+            author: author.to_string(),
         }
     }
 }
@@ -46,13 +46,13 @@ mod test {
     #[test]
     fn chat_supports_adding_messages() {
         let mut chat = Chat::new();
-        chat.add(Message::new(b"ABC", b"author"))
+        chat.add(Message::new("ABC", "author"))
     }
 
     #[test]
     fn chat_contains_messages() {
         let mut chat = Chat::new();
-        chat.add(Message::new(b"ABC", b"author"));
+        chat.add(Message::new("ABC", "author"));
 
         match chat.get_messages().get(0) {
             Some(..) => {}
@@ -62,24 +62,21 @@ mod test {
 
     #[test]
     fn message_constructs() {
-        Message::new(&[56, 56, 56], b"RustFan");
+        Message::new("ABC", "RustFan");
     }
 
     #[test]
     fn message_holds_content() {
-        const CONTENT: &[u8] = b"This is a message";
+        const CONTENT: &str = "This is a message";
         assert_eq!(
-            Message::new(CONTENT, b"someone").content,
-            CONTENT.escape_ascii().to_string()
+            Message::new(CONTENT, "someone").content,
+            CONTENT.to_string()
         );
     }
 
     #[test]
     fn message_holds_author() {
-        const AUTHOR: &[u8] = b"Nickname";
-        assert_eq!(
-            Message::new(b"ffff", AUTHOR).author,
-            AUTHOR.escape_ascii().to_string()
-        );
+        const AUTHOR: &str = "Nickname";
+        assert_eq!(Message::new("ffff", AUTHOR).author, AUTHOR.to_string());
     }
 }

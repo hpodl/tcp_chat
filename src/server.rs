@@ -1,10 +1,11 @@
 use std::{
     io::{self, prelude::*},
-    net::{Shutdown, TcpListener, ToSocketAddrs},
+    net::{Shutdown, TcpListener, TcpStream, ToSocketAddrs},
 };
 
 use super::chat::{Chat, Message};
-use super::request_type::ReqType;
+use super::request::ReqType;
+
 pub struct Instance {
     listener: TcpListener,
     chat: Chat,
@@ -31,38 +32,26 @@ impl Instance {
     /// All error handling is delegated to
     pub fn run(&mut self) {
         for mut stream in self.listener.incoming().flatten() {
-            let mut buffer = String::new();
-            buffer.reserve(1024);
+            let mut buffer = [0; 1024];
 
-            match stream.read_to_string(&mut buffer) {
-                Ok(_) => {
-                    for request in buffer.split_terminator('\n') {
-                        match ReqType::parse(request.as_bytes()) {
-                            ReqType::SendRequest((msg, author)) => {
-                                println!("Received a SEND request.");
-                                self.chat.add(Message::new(msg, author));
-                            }
-                            ReqType::FetchSince(_) => {
-                                println!("Received a TAKE request");
-                                let to_send = format_messages(self.chat.get_messages());
-                                match stream.write_all(to_send.as_bytes()) {
-                                    Ok(_) => {}
-                                    Err(e) => eprintln!("Error writing into stream: {}", e),
-                                }
-                            }
-                            ReqType::Invalid(e) => {
-                                eprintln!("Invalid request: {}", e);
-                                if stream.write(b"Invalid request").is_err() {
-                                    eprintln!("Error writing into stream: {}", e);
-                                };
-                            }
-                        }
+            if stream.read(&mut buffer).is_ok() {
+                match ReqType::parse(&buffer) {
+                    ReqType::Send(msg) => self.chat.add(msg),
+                    ReqType::FetchSince(_TODO) => {
+                        stream
+                            .write(&self.chat.get_messages().iter().fold(
+                                Vec::<u8>::new(),
+                                |mut all, current| {
+                                    all.append(&mut serde_json::to_vec(current).unwrap());
+                                    all
+                                },
+                            ))
+                            .unwrap();
                     }
-                    if stream.shutdown(Shutdown::Write).is_err() {
-                        eprintln!("Failed to shut down the write side of connection.");
-                    };
-                }
-                Err(e) => eprintln!("Error reading the stream: {}", e),
+                    ReqType::Invalid(_) => {
+                        stream.write(b"TODO").unwrap();
+                    }
+                };
             }
         }
     }

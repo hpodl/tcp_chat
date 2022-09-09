@@ -1,5 +1,5 @@
 mod chat;
-mod request_type;
+mod request;
 mod server;
 
 fn main() {
