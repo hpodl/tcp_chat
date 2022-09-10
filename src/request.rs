@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::from_slice;
 
-use crate::chat::Message;
+use crate::chat::MessageProto;
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum ReqType<'a> {
-    Send(Message),
+    Send(MessageProto),
     FetchSince(usize),
     Invalid(&'a str),
 }
@@ -26,10 +26,10 @@ mod test {
     fn send_requests_parses_correctly() {
         let content = "Content";
         let author = "Author";
-        let req = to_vec(&ReqType::Send(Message::new(content, author))).unwrap();
+        let req = to_vec(&ReqType::Send(MessageProto::new(content, author))).unwrap();
         assert_eq!(
             ReqType::parse(&req),
-            ReqType::Send(Message::new(content, author)),
+            ReqType::Send(MessageProto::new(content, author)),
         )
     }
 

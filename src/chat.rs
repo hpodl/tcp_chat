@@ -2,25 +2,53 @@ use serde::{Deserialize, Serialize};
 
 pub struct Chat {
     messages: Vec<Message>,
+    current_id: usize,
 }
 
 impl Chat {
     pub fn new() -> Self {
-        Self { messages: vec![] }
+        Self {
+            messages: vec![],
+            current_id: 0,
+        }
     }
 
-    pub fn add(&mut self, message: Message) {
-        self.messages.push(message);
+    /// Adds the message to chat history
+    pub fn add(&mut self, message_content: MessageProto) {
+        self.messages.push(Message {
+            content: message_content,
+            id: self.current_id,
+        });
+        self.current_id += 1;
     }
 
+    /// Returns a slice of messages with id greater
+    /// than `since`.
+    ///
+    /// It is assumed that `id` corresponds to the index in `self.messages`;
+    /// this can change later on.
+    ///
+    /// If `since` is greater than the highest id, an empty
+    /// slice is returned
     pub fn get_messages(&self, since: usize) -> &[Message] {
-        &self.messages[since..]
+        if since < self.messages.len() {
+            &self.messages[since..]
+        } else {
+            &[]
+        }
     }
 }
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Message {
+    content: MessageProto,
+    id: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+pub struct MessageProto {
     content: String,
     author: String,
 }
@@ -29,9 +57,9 @@ pub struct Message {
 mod test {
     use super::*;
 
-    impl Message {
-        pub fn new(content: &str, author: &str) -> Message {
-            Message {
+    impl MessageProto {
+        pub fn new(content: &str, author: &str) -> MessageProto {
+            MessageProto {
                 content: content.to_string(),
                 author: author.to_string(),
             }
@@ -46,30 +74,30 @@ mod test {
     #[test]
     fn chat_supports_adding_messages() {
         let mut chat = Chat::new();
-        chat.add(Message::new("ABC", "author"))
+        chat.add(MessageProto::new("ABC", "author"))
     }
 
     #[test]
     fn chat_contains_added_message() {
         let mut chat = Chat::new();
-        let message = Message::new("ABC", "author");
-        let message_cmp = Message::new("ABC", "author");
+        let message = MessageProto::new("ABC", "author");
+        let message_cmp = MessageProto::new("ABC", "author");
 
         chat.add(message);
 
-        assert_eq!(chat.messages[0], message_cmp)
+        assert_eq!(chat.messages[0].content, message_cmp)
     }
 
     #[test]
     fn message_constructs() {
-        Message::new("ABC", "RustFan");
+        MessageProto::new("ABC", "RustFan");
     }
 
     #[test]
     fn message_holds_content() {
         const CONTENT: &str = "This is a message";
         assert_eq!(
-            Message::new(CONTENT, "someone").content,
+            MessageProto::new(CONTENT, "someone").content,
             CONTENT.to_string()
         );
     }
@@ -77,7 +105,7 @@ mod test {
     #[test]
     fn message_holds_author() {
         const AUTHOR: &str = "Nickname";
-        assert_eq!(Message::new("ffff", AUTHOR).author, AUTHOR.to_string());
+        assert_eq!(MessageProto::new("ffff", AUTHOR).author, AUTHOR.to_string());
     }
 
     #[test]
@@ -87,7 +115,7 @@ mod test {
 
         let mut chat = Chat::new();
         for _ in 0..COUNT {
-            chat.add(Message::new("ABC", "author"));
+            chat.add(MessageProto::new("ABC", "author"));
         }
 
         assert_eq!(chat.get_messages(SINCE).len(), 2)
