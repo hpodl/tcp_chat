@@ -40,20 +40,23 @@ impl Instance {
                 match ReqType::parse(&buffer[..bytes_read]) {
                     ReqType::Send(msg) => self.chat.add(msg),
                     ReqType::FetchSince(since) => {
-                        stream
-                            .write(&self.chat.get_messages(since).iter().fold(
-                                Vec::<u8>::new(),
-                                |mut all, current| {
-                                    all.append(&mut serde_json::to_vec(current).unwrap());
-                                    all.push(0);
-                                    all
-                                },
-                            ))
-                            .unwrap();
+                        match stream.write_all(&self.chat.get_messages(since).iter().fold(
+                            Vec::<u8>::new(),
+                            |mut all, current| {
+                                all.append(&mut serde_json::to_vec(current).unwrap());
+                                all.push(0);
+                                all
+                            },
+                        )) {
+                            Ok(_) => {}
+                            Err(_) => println!("Couldn't write into buffer."),
+                        }
                     }
                     ReqType::Invalid(_) => {
-                        // TODO
-                        stream.write(b"Invalid request").unwrap();
+                        match stream.write_all(b"Invalid request") {
+                            Ok(_) => {}
+                            Err(_) => println!("Couldn't write into buffer."),
+                        };
                     }
                 };
             }
