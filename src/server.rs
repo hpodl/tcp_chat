@@ -39,9 +39,16 @@ impl Instance {
             if let Ok(bytes_read) = stream.read(&mut buffer) {
                 match ReqType::parse(&buffer[..bytes_read]) {
                     ReqType::Send(msg) => self.chat.add(msg),
-                    ReqType::FetchSince(_TODO) => {
+                    ReqType::FetchSince(since) => {
                         stream
-                            .write(&serde_json::to_vec(&self.chat.get_messages()[0]).unwrap())
+                            .write(&self.chat.get_messages(since).iter().fold(
+                                Vec::<u8>::new(),
+                                |mut all, current| {
+                                    all.append(&mut serde_json::to_vec(current).unwrap());
+                                    all.push(0);
+                                    all
+                                },
+                            ))
                             .unwrap();
                     }
                     ReqType::Invalid(_) => {

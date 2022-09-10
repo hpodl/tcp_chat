@@ -13,8 +13,8 @@ impl Chat {
         self.messages.push(message);
     }
 
-    pub fn get_messages(&self) -> &Vec<Message> {
-        &self.messages
+    pub fn get_messages(&self, since: usize) -> &[Message] {
+        &self.messages[since..]
     }
 }
 
@@ -25,18 +25,18 @@ pub struct Message {
     author: String,
 }
 
-impl Message {
-    pub fn new(content: &str, author: &str) -> Message {
-        Message {
-            content: content.to_string(),
-            author: author.to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
+
+    impl Message {
+        pub fn new(content: &str, author: &str) -> Message {
+            Message {
+                content: content.to_string(),
+                author: author.to_string(),
+            }
+        }
+    }
 
     #[test]
     fn chat_constructs() {
@@ -50,14 +50,14 @@ mod test {
     }
 
     #[test]
-    fn chat_contains_messages() {
+    fn chat_contains_added_message() {
         let mut chat = Chat::new();
-        chat.add(Message::new("ABC", "author"));
+        let message = Message::new("ABC", "author");
+        let message_cmp = Message::new("ABC", "author");
 
-        match chat.get_messages().get(0) {
-            Some(..) => {}
-            _ => panic!(),
-        }
+        chat.add(message);
+
+        assert_eq!(chat.messages[0], message_cmp)
     }
 
     #[test]
@@ -78,5 +78,18 @@ mod test {
     fn message_holds_author() {
         const AUTHOR: &str = "Nickname";
         assert_eq!(Message::new("ffff", AUTHOR).author, AUTHOR.to_string());
+    }
+
+    #[test]
+    fn fetch_returns_corrent_num_of_messages() {
+        const COUNT: usize = 4;
+        const SINCE: usize = 2;
+
+        let mut chat = Chat::new();
+        for _ in 0..COUNT {
+            chat.add(Message::new("ABC", "author"));
+        }
+
+        assert_eq!(chat.get_messages(SINCE).len(), 2)
     }
 }
