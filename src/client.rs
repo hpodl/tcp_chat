@@ -1,8 +1,6 @@
 use std::io::{self, Write};
 use std::net::{SocketAddr, TcpStream};
 
-use serde::de::Error;
-
 use crate::chat::{Chat, Message, MessageProto};
 use crate::request::Request;
 use crate::response::Response;
@@ -59,7 +57,7 @@ impl Client {
         Ok(())
     }
 
-    /// Sends a message with `message` contents to a server at adress provided in `Client::new()` 
+    /// Sends a message with `message` contents to a server at adress provided in `Client::new()`
     pub fn send_message(&mut self, message: &str) -> io::Result<()> {
         let mut stream = self.connection.as_ref().ok_or(io::Error::new(
             io::ErrorKind::Other,
@@ -81,7 +79,9 @@ impl User {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{net::TcpListener, str::FromStr};
+    use std::io::Read;
+    use std::net::TcpListener;
+    use std::str::FromStr;
 
     #[test]
     fn user_exists() {
@@ -121,12 +121,26 @@ mod tests {
         let mut client = Client::new(addr, User::new("name"));
 
         // named, so that it's not dropped instantly
-        let _listener = TcpListener::bind(addr).unwrap();
+        let listener = TcpListener::bind(addr).unwrap();
 
         client.connect().unwrap();
-        assert!(client.send_message("Don't panic.").is_ok());
-    }
 
+        let message_content = "Don't panic.";
+        assert!(client.send_message(message_content).is_ok());
+
+        let mut stream = listener.incoming().next().unwrap().unwrap();
+
+        let mut buf = [0u8; 1024];
+        let bytes_read = stream.read(&mut buf).unwrap();
+
+        // not empty
+        assert!(!buf.starts_with(&[0]));
+
+        let message = MessageProto::new(message_content, &client.user.name);
+        let buf_should_be = serde_json::to_vec(&Request::Send(message)).unwrap();
+
+        assert_eq!(buf[..bytes_read], buf_should_be[..]);
+    }
 
     #[test]
     fn client_handles_responses() {
