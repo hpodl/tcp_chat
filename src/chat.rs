@@ -50,21 +50,21 @@ pub struct Message {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct MessageProto {
     content: String,
-    author: String,
+    user: String,
+}
+
+impl MessageProto {
+    pub fn new(content: &str, user: &str) -> Self {
+        Self {
+            content: content.to_owned(),
+            user: content.to_owned(),
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    impl MessageProto {
-        pub fn new(content: &str, author: &str) -> MessageProto {
-            MessageProto {
-                content: content.to_string(),
-                author: author.to_string(),
-            }
-        }
-    }
 
     #[test]
     fn chat_constructs() {
@@ -105,7 +105,7 @@ mod test {
     #[test]
     fn message_holds_author() {
         const AUTHOR: &str = "Nickname";
-        assert_eq!(MessageProto::new("ffff", AUTHOR).author, AUTHOR.to_string());
+        assert_eq!(MessageProto::new("ffff", AUTHOR).user, AUTHOR.to_string());
     }
 
     #[test]

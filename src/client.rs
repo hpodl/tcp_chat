@@ -1,9 +1,10 @@
-use std::io;
+use std::io::{self, Write};
 use std::net::{SocketAddr, TcpStream};
 
 use serde::de::Error;
 
-use crate::chat::{Chat, Message};
+use crate::chat::{Chat, Message, MessageProto};
+use crate::request::Request;
 use crate::response::Response;
 
 struct Client {
@@ -32,7 +33,7 @@ impl Client {
         }
     }
 
-    /// Connects to a server at address given when creating the client instance
+    /// Connects to a server at address provided in `Client::new()`
     pub fn connect(&mut self) -> io::Result<()> {
         self.connection = Some(TcpStream::connect(self.server_addr)?);
         Ok(())
@@ -56,6 +57,17 @@ impl Client {
             }
         }
         Ok(())
+    }
+
+    /// Sends a message with `message` contents to a server at adress provided in `Client::new()` 
+    pub fn send_message(&mut self, message: &str) -> io::Result<()> {
+        let mut stream = self.connection.as_ref().ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "Not connected to a server.",
+        ))?;
+        let request_buf =
+            serde_json::to_vec(&Request::Send(MessageProto::new(message, &self.user.name)))?;
+        stream.write_all(&request_buf)
     }
 }
 impl User {
@@ -102,6 +114,19 @@ mod tests {
         let mut client = Client::new(addr, User::new("name"));
         assert!(client.connect().is_err());
     }
+
+    #[test]
+    fn client_sends_message() {
+        let addr = SocketAddr::from_str("127.0.0.1:38659").unwrap();
+        let mut client = Client::new(addr, User::new("name"));
+
+        // named, so that it's not dropped instantly
+        let _listener = TcpListener::bind(addr).unwrap();
+
+        client.connect().unwrap();
+        assert!(client.send_message("Don't panic.").is_ok());
+    }
+
 
     #[test]
     fn client_handles_responses() {

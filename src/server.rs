@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::chat::Chat;
-use super::request::ReqType;
+use super::request::Request;
 
 pub struct Instance {
     listener: TcpListener,
@@ -37,9 +37,9 @@ impl Instance {
             let mut buffer = [0; 1024];
 
             if let Ok(bytes_read) = stream.read(&mut buffer) {
-                match ReqType::parse(&buffer[..bytes_read]) {
-                    ReqType::Send(msg) => self.chat.add(msg),
-                    ReqType::FetchSince(since) => {
+                match Request::parse(&buffer[..bytes_read]) {
+                    Request::Send(msg) => self.chat.add(msg),
+                    Request::FetchSince(since) => {
                         match stream.write_all(&self.chat.get_messages(since).iter().fold(
                             Vec::<u8>::new(),
                             |mut all, current| {
@@ -52,7 +52,7 @@ impl Instance {
                             Err(_) => println!("Couldn't write into buffer."),
                         }
                     }
-                    ReqType::Invalid(_) => {
+                    Request::Invalid(_) => {
                         match stream.write_all(b"Invalid request") {
                             Ok(_) => {}
                             Err(_) => println!("Couldn't write into buffer."),
