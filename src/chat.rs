@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use crate::message::{Message, MessageProto};
 
 pub struct Chat {
     messages: Vec<Message>,
@@ -15,10 +15,8 @@ impl Chat {
 
     /// Adds the message to chat history
     pub fn add(&mut self, message_content: MessageProto) {
-        self.messages.push(Message {
-            content: message_content,
-            id: self.current_id,
-        });
+        self.messages
+            .push(Message::new(message_content, self.current_id));
         self.current_id += 1;
     }
 
@@ -37,28 +35,9 @@ impl Chat {
             &[]
         }
     }
-}
 
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct Message {
-    content: MessageProto,
-    id: usize,
-}
-
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct MessageProto {
-    content: String,
-    user: String,
-}
-
-impl MessageProto {
-    pub fn new(content: &str, user: &str) -> Self {
-        Self {
-            content: content.to_owned(),
-            user: user.to_owned(),
-        }
+    pub fn current_id(&self) -> usize {
+        self.current_id
     }
 }
 

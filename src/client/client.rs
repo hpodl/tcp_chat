@@ -1,18 +1,19 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 
-use crate::chat::{Chat, Message, MessageProto};
-use crate::request::Request;
-use crate::response::Response;
+use internet_chat::chat::Chat;
+use internet_chat::message::{Message, MessageProto};
+use internet_chat::request::Request;
+use internet_chat::response::Response;
 
-struct Client {
+pub struct Client {
     server_addr: SocketAddr,
     user: User,
     connection: Option<TcpStream>,
     chat: Chat,
 }
 
-struct User {
+pub struct User {
     name: String,
 }
 
@@ -21,10 +22,8 @@ impl Client {
     where
         T: Into<SocketAddr>,
     {
-        let a: SocketAddr = server_addr.into();
-
         Self {
-            server_addr: a,
+            server_addr: server_addr.into(),
             user,
             connection: None,
             chat: Chat::new(),
@@ -38,7 +37,7 @@ impl Client {
     }
 
     /// Returns chat messages starting at index `since`
-    pub fn get_messages(&self, since: usize) -> &[Message] {
+    pub fn local_messages(&self, since: usize) -> &[Message] {
         &self.chat.get_messages(since)
     }
 
@@ -63,13 +62,36 @@ impl Client {
             io::ErrorKind::Other,
             "Not connected to a server.",
         ))?;
+
         let request_buf =
             serde_json::to_vec(&Request::Send(MessageProto::new(message, &self.user.name)))?;
-        stream.write_all(&request_buf)
+        stream.write_all(&request_buf)?;
+        stream.write_all(b"\n")
+    }
+
+    pub fn request_messages(&mut self) -> io::Result<()> {
+        let mut stream = self.connection.as_ref().ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "Not connected to a server.",
+        ))?;
+
+        stream.write(&serde_json::to_vec(&Request::FetchSince(
+            self.chat.current_id(),
+        ))?)?;
+
+        stream.write_all(b"\n")?;
+
+        let mut buf = vec![0u8; 1024];
+
+        let bytes_read = stream.read(&mut buf)?;
+
+        println!("{:?}", String::from_utf8_lossy(&buf[..bytes_read]));
+        // unimplemented!()
+        Ok(())
     }
 }
 impl User {
-    fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.to_owned(),
         }

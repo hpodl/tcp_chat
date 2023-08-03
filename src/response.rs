@@ -1,5 +1,5 @@
-use crate::chat::MessageProto;
 use serde::{Deserialize, Serialize};
+use crate::message::MessageProto;
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {

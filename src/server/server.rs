@@ -3,8 +3,8 @@ use std::{
     net::{TcpListener, ToSocketAddrs},
 };
 
-use super::chat::Chat;
-use super::request::Request;
+use internet_chat::chat::Chat;
+use internet_chat::request::Request;
 
 pub struct Instance {
     listener: TcpListener,
@@ -37,28 +37,34 @@ impl Instance {
             let mut buffer = [0; 1024];
 
             if let Ok(bytes_read) = stream.read(&mut buffer) {
-                match Request::parse(&buffer[..bytes_read]) {
-                    Request::Send(msg) => self.chat.add(msg),
-                    Request::FetchSince(since) => {
-                        match stream.write_all(&self.chat.get_messages(since).iter().fold(
-                            Vec::<u8>::new(),
-                            |mut all, current| {
-                                all.append(&mut serde_json::to_vec(current).unwrap());
-                                all.push(0);
-                                all
-                            },
-                        )) {
-                            Ok(_) => {}
-                            Err(_) => println!("Couldn't write into buffer."),
+                println!(
+                    "Received {}.",
+                    String::from_utf8_lossy(&buffer[..bytes_read])
+                );
+                let requests = buffer[..bytes_read].split(|x| *x == b'\n');
+                for request in requests {
+                    match Request::parse(request) {
+                        Request::Send(msg) => self.chat.add(msg),
+                        Request::FetchSince(since) => {
+                            match stream.write_all(&self.chat.get_messages(since).iter().fold(
+                                Vec::<u8>::new(),
+                                |mut all, current| {
+                                    all.append(&mut serde_json::to_vec(current).unwrap());
+                                    all
+                                },
+                            )) {
+                                Ok(_) => {}
+                                Err(_) => println!("Couldn't write into buffer."),
+                            }
                         }
-                    }
-                    Request::Invalid(_) => {
-                        match stream.write_all(b"Invalid request") {
-                            Ok(_) => {}
-                            Err(_) => println!("Couldn't write into buffer."),
-                        };
-                    }
-                };
+                        Request::Invalid(_) => {
+                            match stream.write_all(b"Invalid request") {
+                                Ok(_) => {}
+                                Err(_) => println!("Couldn't write into buffer."),
+                            };
+                        }
+                    };
+                }
             }
         }
     }

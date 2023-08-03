@@ -1,7 +1,6 @@
+use crate::message::MessageProto;
 use serde::{Deserialize, Serialize};
 use serde_json;
-
-use crate::chat::MessageProto;
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
@@ -13,7 +12,8 @@ pub enum Request<'a> {
 
 impl<'a> Request<'a> {
     pub fn parse(request: &'a [u8]) -> Request<'a> {
-        serde_json::from_slice::<Request<'a>>(request).unwrap_or(Request::Invalid("Invalid request."))
+        serde_json::from_slice::<Request<'a>>(request)
+            .unwrap_or(Request::Invalid("Invalid request."))
     }
 }
 
