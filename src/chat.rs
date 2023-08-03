@@ -57,7 +57,7 @@ impl MessageProto {
     pub fn new(content: &str, user: &str) -> Self {
         Self {
             content: content.to_owned(),
-            user: content.to_owned(),
+            user: user.to_owned(),
         }
     }
 }
