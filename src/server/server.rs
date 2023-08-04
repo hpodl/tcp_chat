@@ -50,6 +50,7 @@ impl Instance {
                                 Vec::<u8>::new(),
                                 |mut all, current| {
                                     all.append(&mut serde_json::to_vec(current).unwrap());
+                                    all.push(b'\n');
                                     all
                                 },
                             )) {
