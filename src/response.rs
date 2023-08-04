@@ -1,9 +1,9 @@
-use crate::message::MessageProto;
+use crate::message::Message;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Response {
-    Messages(Vec<MessageProto>), // currently there's no simple way to serialize slices of arbitrary size
+    Messages(Vec<Message>), // currently there's no simple way to serialize slices of arbitrary size
     MessageAdded(),
     Invalid,
 }

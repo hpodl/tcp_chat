@@ -84,9 +84,20 @@ impl Client {
         let mut buf = vec![0u8; 1024];
 
         let bytes_read = stream.read(&mut buf)?;
+        let responses = buf[..bytes_read].split(|x| *x == b'\n');
 
-        println!("{:?}", String::from_utf8_lossy(&buf[..bytes_read]));
-        // unimplemented!()
+        for response in responses {
+            // println!("Parsing: {}", String::from_utf8_lossy(response));
+            match serde_json::from_slice::<Message>(response) {
+                Ok(msg) => self.chat.add(msg.content),
+                Err(_) => {
+                    println!(
+                        "Couldn't parse message: {}",
+                        String::from_utf8_lossy(response)
+                    );
+                }
+            };
+        }
         Ok(())
     }
 }

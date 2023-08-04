@@ -20,4 +20,8 @@ fn main() {
         .expect("Failed when sending a message");
 
     client.request_messages().unwrap();
+
+    for message in client.local_messages(0) {
+        println!("{}", message);
+    }
 }
