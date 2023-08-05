@@ -4,7 +4,6 @@ use std::net::{SocketAddr, TcpStream};
 use internet_chat::chat::Chat;
 use internet_chat::message::{Message, MessageProto};
 use internet_chat::request::Request;
-use internet_chat::response::Response;
 
 pub struct Client {
     server_addr: SocketAddr,
@@ -39,21 +38,6 @@ impl Client {
     /// Returns chat messages starting at index `since`
     pub fn local_messages(&self, since: usize) -> &[Message] {
         &self.chat.get_messages(since)
-    }
-
-    pub fn handle_response(&mut self, response: &Response) -> io::Result<()> {
-        match response {
-            Response::Messages(messages) => {
-                println!("Got {} messages", messages.len());
-            }
-            Response::MessageAdded() => {
-                println!("Message sent and added succesfully.");
-            }
-            Response::Invalid => {
-                println!("Server received invalid request.");
-            }
-        }
-        Ok(())
     }
 
     /// Sends a message with `message` contents to a server at adress provided in `Client::new()`
@@ -173,15 +157,5 @@ mod tests {
         let buf_should_be = serde_json::to_vec(&Request::Send(message)).unwrap();
 
         assert_eq!(buf[..bytes_read], buf_should_be[..]);
-    }
-
-    #[test]
-    fn client_handles_responses() {
-        let addr = SocketAddr::from_str("127.0.0.1:38659").unwrap();
-        let mut client = Client::new(addr, User::new("name"));
-
-        assert!(client.handle_response(&Response::Invalid).is_ok());
-        assert!(client.handle_response(&Response::MessageAdded()).is_ok());
-        assert!(client.handle_response(&Response::Messages(vec![])).is_ok());
     }
 }
