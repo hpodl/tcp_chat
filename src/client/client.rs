@@ -42,10 +42,7 @@ impl Client {
 
     /// Sends a message with `message` contents to a server at adress provided in `Client::new()`
     pub fn send_message(&mut self, message: &str) -> io::Result<()> {
-        let mut stream = self.connection.as_ref().ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "Not connected to a server.",
-        ))?;
+        let mut stream = self.get_connection()?;
 
         let request_buf =
             serde_json::to_vec(&Request::Send(MessageProto::new(message, &self.user.name)))?;
@@ -54,10 +51,7 @@ impl Client {
     }
 
     pub fn request_messages(&mut self) -> io::Result<()> {
-        let mut stream = self.connection.as_ref().ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "Not connected to a server.",
-        ))?;
+        let mut stream = self.get_connection()?;
 
         stream.write(&serde_json::to_vec(&Request::FetchSince(
             self.chat.current_id(),
@@ -83,6 +77,13 @@ impl Client {
             };
         }
         Ok(())
+    }
+
+    fn get_connection(&self) -> io::Result<&TcpStream> {
+        self.connection.as_ref().ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "Not connected to a server.",
+        ))
     }
 }
 impl User {
