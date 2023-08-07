@@ -157,6 +157,7 @@ mod tests {
         let message = MessageProto::new(message_content, &client.user.name);
         let buf_should_be = serde_json::to_vec(&Request::Send(message)).unwrap();
 
-        assert_eq!(buf[..bytes_read], buf_should_be[..]);
+        // Skipping newline
+        assert_eq!(buf[..(bytes_read-1)], buf_should_be[..]);
     }
 }
