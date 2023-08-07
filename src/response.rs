@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum Response {
     Messages(Vec<Message>), // currently there's no simple way to serialize slices of arbitrary size
     MessageAdded(),
+    EndMessageStream(),
     Invalid,
 }
 

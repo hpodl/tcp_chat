@@ -1,13 +1,14 @@
-use std::{
-    io::{self, prelude::*},
-    net::{TcpListener, ToSocketAddrs},
-};
+use std::io::{self, BufWriter};
+use std::io::{BufRead, BufReader, Write};
+use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 
 use internet_chat::chat::Chat;
+use internet_chat::message::Message;
 use internet_chat::request::Request;
+use internet_chat::response::Response;
 
 pub struct Instance {
-    listener: TcpListener,
+    address: SocketAddr,
     chat: Chat,
 }
 
@@ -20,8 +21,13 @@ impl Instance {
     where
         A: ToSocketAddrs,
     {
+        let address = address
+            .to_socket_addrs()?
+            .next()
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Incorrect address."))?;
+
         Ok(Self {
-            listener: TcpListener::bind(address)?,
+            address: address,
             chat: Chat::new(),
         })
     }
@@ -33,41 +39,47 @@ impl Instance {
     /// # Panics and Errors
     /// All error handling is delegated to
     pub fn run(&mut self) {
-        for mut stream in self.listener.incoming().flatten() {
-            let mut buffer = [0; 1024];
+        let listener = TcpListener::bind(self.address).expect("Couldn't bind listener address.");
 
-            if let Ok(bytes_read) = stream.read(&mut buffer) {
-                println!(
-                    "Received {}.",
-                    String::from_utf8_lossy(&buffer[..bytes_read])
-                );
-                let requests = buffer[..bytes_read].split(|x| *x == b'\n');
-                for request in requests {
-                    match Request::parse(request) {
-                        Request::Send(msg) => self.chat.add(msg),
-                        Request::FetchSince(since) => {
-                            match stream.write_all(&self.chat.get_messages(since).iter().fold(
-                                Vec::<u8>::new(),
-                                |mut all, current| {
-                                    all.append(&mut serde_json::to_vec(current).unwrap());
-                                    all.push(b'\n');
-                                    all
-                                },
-                            )) {
-                                Ok(_) => {}
-                                Err(_) => println!("Couldn't write into buffer."),
-                            }
-                        }
-                        Request::Invalid(_) => {
-                            match stream.write_all(b"Invalid request") {
-                                Ok(_) => {}
-                                Err(_) => println!("Couldn't write into buffer."),
-                            };
-                        }
-                    };
+        for stream in listener.incoming().flatten() {
+            match self.handle_stream(&stream) {
+                Ok(_) => {
+                    println!("Stream handled succesfully.")
                 }
-            }
+                Err(_) => {
+                    println!("Error handling stream with: {:?}.", stream.peer_addr())
+                }
+            };
         }
+    }
+
+    fn handle_stream(&mut self, stream: &TcpStream) -> io::Result<()> {
+        let reader = BufReader::new(stream.try_clone()?);
+        let mut writer = stream;
+
+        let mut write_with_newline = |data: &[u8]| -> io::Result<()> {
+            writer.write_all(data)?;
+            writer.write_all(b"\n")
+        };
+
+        for line in reader.lines() {
+            let line = line?;
+            match Request::parse_str(&line) {
+                Request::Send(msg) => {
+                    self.chat.add(msg);
+                    write_with_newline(b"Ok")?;
+                }
+                Request::FetchSince(since) => {
+                    let messages: Vec<Message> = self.chat.get_messages(since).iter().map(|x| x.clone()).collect();
+                    write_with_newline(&serde_json::to_vec(&Response::Messages(messages))?)?;
+                }
+                Request::Invalid(_) => {
+                    write_with_newline(b"Invalid request")?;
+                }
+            };
+        }
+
+        Ok(())
     }
 }
 
@@ -82,7 +94,8 @@ mod test {
         A: ToSocketAddrs,
     {
         let mut connection = TcpStream::connect(address).unwrap();
-        connection.write(message.as_bytes())
+        connection.write(message.as_bytes()).unwrap();
+        connection.write(b"\n")
     }
 
     /////////
@@ -96,13 +109,5 @@ mod test {
     #[test]
     fn instance_errors_on_invalid_address() {
         assert!(Instance::new("266.788.123.1:7878").is_err())
-    }
-
-    #[test]
-    fn instance_accepts_connections() {
-        const ADDRESS: &str = "127.0.0.1:1234";
-        let _server = Instance::new(ADDRESS);
-
-        connect_and_send(ADDRESS, "Don't panic").unwrap();
     }
 }

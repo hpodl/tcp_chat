@@ -1,9 +1,10 @@
-use std::io::{self, Read, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 
 use internet_chat::chat::Chat;
 use internet_chat::message::{Message, MessageProto};
 use internet_chat::request::Request;
+use internet_chat::response::{self, Response};
 
 pub struct Client {
     server_addr: SocketAddr,
@@ -47,35 +48,50 @@ impl Client {
         let request_buf =
             serde_json::to_vec(&Request::Send(MessageProto::new(message, &self.user.name)))?;
         stream.write_all(&request_buf)?;
-        stream.write_all(b"\n")
+        stream.write_all(b"\n")?;
+
+        let mut buf = [0u8; 1024];
+
+        stream.read(&mut buf)?;
+        println!("Got {}", String::from_utf8_lossy(&buf));
+
+        Ok(())
     }
 
     pub fn request_messages(&mut self) -> io::Result<()> {
-        let mut stream = self.get_connection()?;
+        let stream = self.get_connection()?;
 
-        stream.write(&serde_json::to_vec(&Request::FetchSince(
+        let mut writer = stream.clone();
+        let reader = BufReader::new(stream.try_clone()?);
+
+        writer.write_all(&serde_json::to_vec(&Request::FetchSince(
             self.chat.current_id(),
         ))?)?;
 
-        stream.write_all(b"\n")?;
+        writer.write_all(b"\n")?;
 
-        let mut buf = vec![0u8; 1024];
+        for response in reader.lines() {
+            let response = response?;
+            if response.len() < 1 {
+                continue;
+            }
 
-        let bytes_read = stream.read(&mut buf)?;
-        let responses = buf[..bytes_read].split(|x| *x == b'\n');
-
-        for response in responses {
-            // println!("Parsing: {}", String::from_utf8_lossy(response));
-            match serde_json::from_slice::<Message>(response) {
-                Ok(msg) => self.chat.add(msg.content),
-                Err(_) => {
-                    println!(
-                        "Couldn't parse message: {}",
-                        String::from_utf8_lossy(response)
-                    );
+            match serde_json::from_str::<Response>(&response)? {
+                Response::Messages(messages) => {
+                    for message in messages {
+                        self.chat.add(message.content)
+                    }
+                }
+                Response::Invalid => {
+                    println!("Response: Invalid.")
+                }
+                _ => {
+                    unreachable!()
                 }
             };
+            break;
         }
+
         Ok(())
     }
 
@@ -158,6 +174,6 @@ mod tests {
         let buf_should_be = serde_json::to_vec(&Request::Send(message)).unwrap();
 
         // Skipping newline
-        assert_eq!(buf[..(bytes_read-1)], buf_should_be[..]);
+        assert_eq!(buf[..(bytes_read - 1)], buf_should_be[..]);
     }
 }

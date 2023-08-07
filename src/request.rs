@@ -15,6 +15,11 @@ impl<'a> Request<'a> {
         serde_json::from_slice::<Request<'a>>(request)
             .unwrap_or(Request::Invalid("Invalid request."))
     }
+
+    pub fn parse_str(request: &'a str) -> Request<'a> {
+        serde_json::from_str::<Request<'a>>(request)
+            .unwrap_or(Request::Invalid("Invalid request."))
+    }
 }
 
 #[cfg(test)]
