@@ -1,5 +1,6 @@
 use crate::message::{Message, MessageProto};
 
+#[derive(Default)]
 pub struct Chat {
     messages: Vec<Message>,
     current_id: usize,
@@ -7,10 +8,7 @@ pub struct Chat {
 
 impl Chat {
     pub fn new() -> Self {
-        Self {
-            messages: vec![],
-            current_id: 0,
-        }
+        Self::default()
     }
 
     /// Adds the message to chat history

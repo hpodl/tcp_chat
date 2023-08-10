@@ -1,10 +1,11 @@
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::io;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 
 use internet_chat::chat::Chat;
 use internet_chat::message::{Message, MessageProto};
 use internet_chat::request::Request;
-use internet_chat::response::{self, Response};
+use internet_chat::response::Response;
 
 pub struct Client {
     server_addr: SocketAddr,
@@ -38,7 +39,7 @@ impl Client {
 
     /// Returns chat messages starting at index `since`
     pub fn local_messages(&self, since: usize) -> &[Message] {
-        &self.chat.get_messages(since)
+        self.chat.get_messages(since)
     }
 
     /// Sends a message with `message` contents to a server at adress provided in `Client::new()`
@@ -50,19 +51,21 @@ impl Client {
         stream.write_all(&request_buf)?;
         stream.write_all(b"\n")?;
 
-        let mut buf = [0u8; 1024];
+        
+        let mut reader = BufReader::new(stream);
+        let mut buf = String::new();
+        reader.read_line(&mut buf)?;
 
-        stream.read(&mut buf)?;
-        println!("Got {}", String::from_utf8_lossy(&buf));
-
+        println!("Got {}", buf);
+        
         Ok(())
     }
 
     pub fn request_messages(&mut self) -> io::Result<()> {
         let stream = self.get_connection()?;
 
-        let mut writer = stream.clone();
-        let reader = BufReader::new(stream.try_clone()?);
+        let mut writer = (*stream).try_clone()?;
+        let reader = BufReader::new(stream);
 
         writer.write_all(&serde_json::to_vec(&Request::FetchSince(
             self.chat.current_id(),
@@ -72,7 +75,7 @@ impl Client {
 
         for response in reader.lines() {
             let response = response?;
-            if response.len() < 1 {
+            if response.is_empty() {
                 continue;
             }
 

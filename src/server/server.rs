@@ -1,4 +1,4 @@
-use std::io::{self, BufWriter};
+use std::io;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 
@@ -27,7 +27,7 @@ impl Instance {
             .ok_or(io::Error::new(io::ErrorKind::Other, "Incorrect address."))?;
 
         Ok(Self {
-            address: address,
+            address,
             chat: Chat::new(),
         })
     }
@@ -67,10 +67,10 @@ impl Instance {
             match Request::parse_str(&line) {
                 Request::Send(msg) => {
                     self.chat.add(msg);
-                    write_with_newline(b"Ok")?;
+                    write_with_newline(&serde_json::to_vec(&Response::MessageAdded())?)?;
                 }
                 Request::FetchSince(since) => {
-                    let messages: Vec<Message> = self.chat.get_messages(since).iter().map(|x| x.clone()).collect();
+                    let messages: Vec<Message> = (*self.chat.get_messages(since)).to_owned();
                     write_with_newline(&serde_json::to_vec(&Response::Messages(messages))?)?;
                 }
                 Request::Invalid(_) => {

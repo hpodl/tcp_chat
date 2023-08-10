@@ -10,7 +10,7 @@ pub enum Response {
 }
 
 impl Response {
-    pub fn parse<'a>(response: &'a [u8]) -> Response {
+    pub fn parse(response: &[u8]) -> Response {
         serde_json::from_slice::<Response>(response).unwrap_or(Response::Invalid)
     }
 }
