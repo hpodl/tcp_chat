@@ -1,5 +1,5 @@
 use std::io;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::net::{SocketAddr, TcpStream};
 
 use internet_chat::chat::Chat;
@@ -51,16 +51,16 @@ impl Client {
         stream.write_all(&request_buf)?;
         stream.write_all(b"\n")?;
 
-        
         let mut reader = BufReader::new(stream);
         let mut buf = String::new();
         reader.read_line(&mut buf)?;
 
-        println!("Got {}", buf);
-        
+        println!("Got {}", buf.trim_end());
+
         Ok(())
     }
 
+    /// Requests messages from the server and adds them to local `Chat` instance
     pub fn request_messages(&mut self) -> io::Result<()> {
         let stream = self.get_connection()?;
 
@@ -73,12 +73,7 @@ impl Client {
 
         writer.write_all(b"\n")?;
 
-        for response in reader.lines() {
-            let response = response?;
-            if response.is_empty() {
-                continue;
-            }
-
+        if let Some(Ok(response)) = reader.lines().next() {
             match serde_json::from_str::<Response>(&response)? {
                 Response::Messages(messages) => {
                     for message in messages {
@@ -92,7 +87,6 @@ impl Client {
                     unreachable!()
                 }
             };
-            break;
         }
 
         Ok(())
